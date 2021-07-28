@@ -22,6 +22,8 @@ classdef nonlinearMPC
             obj.R = R;
             obj.H = obj.construct_costfunction_matrix();
             [obj.Cineq_A, obj.Cineq_b] = obj.construct_ineq_constraint(Xc,Uc);
+            obj.Cinit_A = [];
+            obj.Cinit_b = [];
         end
     end
     methods(Access = public)
@@ -161,12 +163,12 @@ classdef nonlinearMPC
             nonlcon = @(s)obj.dynamic_nonlinear_constraint(s);
             % assume u = 0 is the initial searching point.
             s0 = zeros(obj.n_opt,1);
-            s0(1:obj.sys.nx) = obj.Cinit_b;
+            s0(1:obj.sys.nx,1) = obj.Cinit_b;
             x = obj.Cinit_b;
             for i = 1:obj.n_horizon
                 u_next = zeros(obj.sys.nu,1);
-                x = mysys.propagate(x, u_next);
-                s0(obj.sys.nx*(i)+1:obj.sys.nx*(i)+1) = x;
+                x = obj.sys.propagate(x, u_next);
+                s0(obj.sys.nx*(i)+1:obj.sys.nx*(i+1), 1) = x;
             end
             [var_optim] = fmincon(cost_function, s0, A, b, Aeq, beq,[],[],nonlcon, options);
             x_seq = reshape(var_optim(1:obj.sys.nx*(obj.n_horizon+1)), obj.sys.nx, obj.n_horizon+1);
