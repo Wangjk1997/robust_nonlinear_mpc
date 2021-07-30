@@ -10,6 +10,7 @@ classdef nonlinearMPC
         Cineq_b;
         Cinit_A;
         Cinit_b;
+        s_ref;
     end
     methods(Access = public)
         function obj = nonlinearMPC(sys, Xc, Uc, N, Q, R)
@@ -24,6 +25,7 @@ classdef nonlinearMPC
             [obj.Cineq_A, obj.Cineq_b] = obj.construct_ineq_constraint(Xc,Uc);
             obj.Cinit_A = [];
             obj.Cinit_b = [];
+            obj.s_ref = zeros(obj.n_opt,1);
         end
     end
     methods(Access = public)
@@ -38,7 +40,7 @@ classdef nonlinearMPC
         end
         
         function value = costfunction(obj, s)
-            value = s'* obj.H * s;
+            value = (s - obj.s_ref)'* obj.H * (s - obj.s_ref);
         end
         
         function [c, ceq] = dynamic_nonlinear_constraint(obj, s)
@@ -152,6 +154,15 @@ classdef nonlinearMPC
             obj.Cinit_b = x_init;
         end
         
+        function obj = set_reference(obj, s_ref)
+            if (size(s_ref,1) == obj.sys.nx)
+                for i = 1:obj.n_horizon
+                    obj.s_ref(obj.sys.nx * (i-1) + 1 : obj.sys.nx * i) = s_ref
+                end
+            elseif(size(s_ref,1) == obj.n_opt)
+                obj.s_ref = s_ref;
+            end
+        end
         
         function [x_seq, u_seq] = solve(obj)
             options = optimoptions('fmincon', 'Display', 'none');
